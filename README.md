@@ -19,5 +19,5 @@ DC Fire EMS likes to post their stats day to day, i.e. (https://twitter.com/dcfi
 
 ### DCPoliceDept when they tell you to call
 
-DCPoliceDept constally puts out alerts on when to call 911. i.e. (https://twitter.com/search?q=(911)%20(from%3ADCPoliceDept)&src=typed_query&f=live). The goal will be to get this data and classify it to understand what type of incidents they are encouraging 911 calls for
+DCPoliceDept constantly puts out alerts on when to call 911. i.e. (https://twitter.com/search?q=(911)%20(from%3ADCPoliceDept)&src=typed_query&f=live). The goal will be to get this data and classify it to understand what type of incidents they are encouraging 911 calls for
 
