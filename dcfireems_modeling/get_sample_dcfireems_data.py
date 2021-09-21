@@ -4,6 +4,7 @@ Module for generating sample data from dcfireems for modeling building.
 
 import calendar
 from csv import DictWriter
+from datetime import datetime
 
 # libraries
 import numpy as np
@@ -155,4 +156,20 @@ def get_dummy_csv(std_dev=2, to_csv=False) -> list:
     return sample_rows
 
 
+def get_season(date: datetime) -> str:
+    """Return season for given date."""
+    year = date.year
+    seasons = {
+        'Summer': (datetime(year, 6, 21), datetime(year, 9, 22)),
+        'Autumn': (datetime(year, 9, 23), datetime(year, 12, 20)),
+        'Spring': (datetime(year, 3, 21), datetime(year, 6, 20))
+    }
+    for season, (season_start, season_end) in seasons.items():
+        if season_start <= date <= season_end:
+            return season
+    else:
+        return 'Winter'
+
+
 # print(get_dummy_csv(to_csv=True))
+# print(get_season(datetime(2015, 8, 1)))
