@@ -9,6 +9,7 @@ from datetime import datetime
 # libraries
 import numpy as np
 import numpy.random
+import pandas as pd
 
 DISPATCH_CALLS_AGG_DATA = {
     'date': [
@@ -67,6 +68,7 @@ FIELD_NAMES = [
     'date', 'total_calls', 'critical',
     'non_critical', 'fire', 'source'
 ]
+SAMPLE_HIST_WEATHER_CSV = './Washington_2014-08-01_2015-08-31.csv'
 
 
 def _get_days() -> list:
@@ -171,5 +173,63 @@ def get_season(date: datetime) -> str:
         return 'Winter'
 
 
+def summarize_weather_data(
+        hist_csv=SAMPLE_HIST_WEATHER_CSV, to_csv=True
+) -> pd.DataFrame:
+    """Engineer features from historical weather data for model building."""
+    hist_df = pd.read_csv(hist_csv)
+    hist_df.dt_iso = pd.to_datetime(hist_df.dt_iso)
+    hist_df['date'] = pd.to_datetime(hist_df.dt_iso.dt.date)
+
+    # drop useless columns: timezone, city_name, lat, lon, sea_level, grnd_level,
+    # rain_3h (will use cumulative sum for rain_1h for rain total), snow_3h,
+    # weather_id in lieu of weather_description, and weather_icon
+    hist_df = hist_df.drop(columns=[
+        'city_name', 'lat', 'lon', 'sea_level', 'grnd_level',
+        'rain_3h', 'snow_3h', 'weather_id', 'weather_icon', 'timezone'
+    ])
+
+    # let's get mean values per day for quantitative columns and replace NaNs with zero
+    grp = hist_df.groupby(by='date').mean()
+    mean_df = grp.loc[:, ['temp', 'feels_like', 'pressure', 'humidity',
+                          'wind_speed', 'wind_deg', 'rain_1h', 'snow_1h', 'clouds_all']].reset_index()
+    mean_df.rename(columns={
+        'rain_1h': 'avg_rain', 'snow_1h': 'avg_snow'
+    }, inplace=True)
+    mean_df.fillna(0, inplace=True)
+
+    # let's get sums for rain_1h and snow_1h so we have total rainfall and snowfall in mm
+    grp = hist_df.groupby(by='date').sum()
+    sum_df = grp.loc[:, ['rain_1h', 'snow_1h']].rename(columns={
+        'rain_1h': 'total_rain', 'snow_1h': 'total_snow'
+    }).reset_index()
+
+    # let's update temp_min/max columns with min/max across the whole day
+    grp = hist_df.groupby(by='date').min()
+    min_df = grp.loc[:, 'temp_min'].reset_index()
+    grp = hist_df.groupby(by='date').min()
+    max_df = grp.loc[:, 'temp_max'].reset_index()
+
+    # let's one-hot encode weather_main and weather_description columns
+    one_hot_df = pd.get_dummies(
+        hist_df[['date', 'weather_main', 'weather_description']],
+        prefix='weather'
+    )
+    one_hot_df = one_hot_df.groupby(by='date').max().reset_index()
+
+    # merge engineered features into single dataframe
+    weather_df = pd.merge(mean_df, sum_df, how='left', on='date')
+    weather_df = pd.merge(weather_df, min_df, how='left', on='date')
+    weather_df = pd.merge(weather_df, max_df, how='left', on='date')
+    weather_df = pd.merge(weather_df, one_hot_df, how='left', on='date')
+
+    if to_csv:
+        file_name = f'Munged_{hist_csv.split("/")[1]}'
+        weather_df.to_csv(file_name, index=False)
+
+    return weather_df
+
+
 # print(get_dummy_csv(to_csv=True))
 # print(get_season(datetime(2015, 8, 1)))
+# print(summarize_weather_data().head())
